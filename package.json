@@ -1,0 +1,13 @@
+{
+  "name": "promise-implementation",
+  "version": "1.0.0",
+  "description": "Javascript promise implementation conformant to the Promises/A+ spec",
+  "main": "index.js",
+  "repository": "https://github.com/jeffzh4ng/promise-implementation",
+  "author": "Jeff Zhang",
+  "license": "MIT",
+  "dependencies": {
+    "jest": "^26.1.0",
+    "typescript": "^3.9.7"
+  }
+}
