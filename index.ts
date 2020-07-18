@@ -1,4 +1,4 @@
-enum STATE {
+export enum PROMISE_STATE {
   PENDING = 'PENDING',
   FULFILLED = 'FULFILLED',
   REJECTED = 'REJECTED',
@@ -20,12 +20,12 @@ type FulfillHandler = FulfillFn
 type RejectHandler = RejectFn
 
 export class APromise {
-  state: STATE
+  state: PROMISE_STATE
   value: unknown
 
   constructor(executor: ExecutorFn) {
     // initial state of Promise is pending
-    this.state = STATE.PENDING
+    this.state = PROMISE_STATE.PENDING
 
     // call executor immediately
     callExecutor(this, executor)
@@ -37,10 +37,21 @@ export class APromise {
 }
 
 const callExecutor = (promise: APromise, executor: ExecutorFn) => {
+  let called = false
+
   // To the client, api of fulfill and reject only take 1 param. In reality, it takes the promise
   // object in which it mutates state.
-  const wrappedFulfill = (value: unknown) => fulfill(promise, value)
-  const wrappedReject = (error: unknown) => reject(promise, error)
+  const wrappedFulfill = (value: unknown): void => {
+    if (called) return
+    called = true
+    fulfill(promise, value)
+  }
+
+  const wrappedReject = (error: unknown): void => {
+    if (called) return
+    called = true
+    reject(promise, error)
+  }
 
   executor(wrappedFulfill, wrappedReject)
 }
@@ -49,18 +60,21 @@ const callExecutor = (promise: APromise, executor: ExecutorFn) => {
 // need to take APromise object because they will be called in the client provided executor function
 // which has it's own `this` context.
 const fulfill = (promise: APromise, result: unknown) => {
-  promise.state = STATE.FULFILLED
+  promise.state = PROMISE_STATE.FULFILLED
   promise.value = result
 }
 
 const reject = (promise: APromise, error: unknown) => {
-  promise.state = STATE.REJECTED
+  promise.state = PROMISE_STATE.REJECTED
   promise.value = error
 }
 
-const handleResolved = (promise: APromise, onFulfilled, onRejected) => {
-  const handler = promise.state === STATE.FULFILLED ? onFulfilled : onRejected
-  if (handler === null) throw new Error()
+const handleResolved = (
+  promise: APromise,
+  onFulfilled: FulfillHandler,
+  onRejected: RejectHandler
+) => {
+  const handler = promise.state === PROMISE_STATE.FULFILLED ? onFulfilled : onRejected
 
   handler(promise.value)
 }

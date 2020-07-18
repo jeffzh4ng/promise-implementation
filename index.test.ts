@@ -1,4 +1,5 @@
-import { APromise } from './index'
+import { APromise, PROMISE_STATE } from './index'
+
 // =================================================================================================
 //                                          PROMISE STATE
 // =================================================================================================
@@ -13,38 +14,40 @@ import { APromise } from './index'
 // pending -> fulfilled and a call to reject will transition the state of the promise from
 // pendign -> rejected.
 
-it('receives an executor function when constructed which is called immediately', () => {
-  const executor = jest.fn() // mock exector with spy
-  const promise = new APromise(executor)
+describe('State', () => {
+  it('receives an executor function when constructed which is called immediately', () => {
+    const executor = jest.fn() // mock exector with spy
+    const promise = new APromise(executor)
 
-  expect(executor.mock.calls.length).toBe(1)
+    expect(executor.mock.calls.length).toBe(1)
 
-  expect(typeof executor.mock.calls[0][0]).toBe('function')
-  expect(typeof executor.mock.calls[0][1]).toBe('function')
-})
-
-it('is in PENDING state', () => {
-  const promise = new APromise(function executor(fulfill, reject) {})
-  expect(promise.state).toBe('PENDING')
-})
-
-it('transitions to the FULFILLED state with a value', () => {
-  const value = 'fulfilled'
-  const promise = new APromise(function executor(fulfill, reject) {
-    fulfill(value)
+    expect(typeof executor.mock.calls[0][0]).toBe('function')
+    expect(typeof executor.mock.calls[0][1]).toBe('function')
   })
 
-  expect(promise.state).toBe('FULFILLED')
-})
-
-it('transitions to the REJECTED state with a value', () => {
-  const value = 'rejected'
-
-  const promise = new APromise(function executor(fulfill, reject) {
-    reject(value)
+  it('is in PENDING state', () => {
+    const promise = new APromise(function executor(fulfill, reject) {})
+    expect(promise.state).toBe(PROMISE_STATE.PENDING)
   })
 
-  expect(promise.state).toBe('REJECTED')
+  it('transitions to the FULFILLED state with a value', () => {
+    const value = 'fulfilled'
+    const promise = new APromise(function executor(fulfill, reject) {
+      fulfill(value)
+    })
+
+    expect(promise.state).toBe(PROMISE_STATE.FULFILLED)
+  })
+
+  it('transitions to the REJECTED state with a value', () => {
+    const reason = 'rejected'
+
+    const promise = new APromise(function executor(fulfill, reject) {
+      reject(reason)
+    })
+
+    expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+  })
 })
 
 // =================================================================================================
@@ -57,31 +60,79 @@ it('transitions to the REJECTED state with a value', () => {
 // the Promise when Promise in in a REJECTED state. Both of these functions will be called with the
 // corresponding value/error. From now on, these functions will be referred to as handlers.
 
-it('should have a then method', () => {
-  const promise = new APromise(() => {})
-  expect(typeof promise.then).toBe('function')
+describe('Observing changes', () => {
+  it('should have a then method', () => {
+    const promise = new APromise(() => {})
+    expect(typeof promise.then).toBe('function')
+  })
+
+  it('should call the onFulfilled handler when a promise is in a FULFILLED state', () => {
+    const value = 'fulfilled'
+    const onFulfilled = jest.fn()
+
+    const promise = new APromise((fulfill, reject) => {
+      fulfill(value)
+    }).then(onFulfilled, null)
+
+    expect(onFulfilled.mock.calls.length).toBe(1)
+    expect(onFulfilled.mock.calls[0][0]).toBe(value)
+  })
+
+  it('should call the onRejected handler when a promise is in a REJECTED state', () => {
+    const reason = 'rejected'
+    const onRejected = jest.fn()
+
+    const promise = new APromise((fulfill, reject) => {
+      reject(reason)
+    }).then(null, onRejected)
+
+    expect(onRejected.mock.calls.length).toBe(1)
+    expect(onRejected.mock.calls[0][0]).toBe(reason)
+  })
 })
 
-it('should call the onFulfilled handler when a promise is in a FULFILLED state', () => {
+// =================================================================================================
+//                                         One-way Transitions
+// =================================================================================================
+
+// Once the state of a Promise transitions to FULFILLED or REJECTED, it should not transition to any
+// other state.
+
+describe('One-way transitions', () => {
   const value = 'fulfilled'
-  const onFulfilled = jest.fn()
+  const reason = 'rejected'
 
-  const promise = new APromise((fulfill, reject) => {
-    fulfill(value)
-  }).then(onFulfilled, null)
+  it('does not reject after being fulfilled', () => {
+    const onFulfilled = jest.fn()
+    const onRejected = jest.fn()
 
-  expect(onFulfilled.mock.calls.length).toBe(1)
-  expect(onFulfilled.mock.calls[0][0]).toBe(value)
-})
+    const promise = new APromise((fulfill, reject) => {
+      fulfill(value)
+      reject(reason)
+    })
 
-it('should call the onRejected handler when a promise is in a REJECTED state', () => {
-  const value = 'rejected'
-  const onRejected = jest.fn()
+    promise.then(onFulfilled, onRejected)
 
-  const promise = new APromise((fulfill, reject) => {
-    reject(value)
-  }).then(null, onRejected)
+    expect(onFulfilled.mock.calls.length).toBe(1)
+    expect(onFulfilled.mock.calls[0][0]).toBe(value)
+    expect(onRejected.mock.calls.length).toBe(0)
+    expect(promise.state).toBe(PROMISE_STATE.FULFILLED)
+  })
 
-  expect(onRejected.mock.calls.length).toBe(1)
-  expect(onRejected.mock.calls[0][0]).toBe(value)
+  it('does not fulfill after being rejected', () => {
+    const onFulfilled = jest.fn()
+    const onRejected = jest.fn()
+
+    const promise = new APromise((fulfill, reject) => {
+      reject(reason)
+      fulfill(value)
+    })
+
+    promise.then(onFulfilled, onRejected)
+
+    expect(onRejected.mock.calls.length).toBe(1)
+    expect(onRejected.mock.calls[0][0]).toBe(reason)
+    expect(onFulfilled.mock.calls.length).toBe(0)
+    expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+  })
 })
