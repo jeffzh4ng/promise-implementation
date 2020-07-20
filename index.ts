@@ -19,14 +19,15 @@ interface ExecutorFn {
 type FulfillHandler = FulfillFn
 type RejectHandler = RejectFn
 
-interface Handlers {
+interface HandlerInfo {
+  promise: APromise
   onFulfilled: FulfillHandler
   onRejected: RejectHandler
 }
 
 export class APromise {
   state: PROMISE_STATE
-  queue: Array<Handlers>
+  queue: Array<HandlerInfo>
   value: unknown
 
   constructor(executor: ExecutorFn) {
@@ -39,7 +40,9 @@ export class APromise {
   }
 
   then(onFulfilled: FulfillHandler | null, onRejected: FulfillHandler | null) {
-    handle(this, { onFulfilled, onRejected })
+    const promise = new APromise(() => {})
+    handle(this, { promise, onFulfilled, onRejected })
+    return promise
   }
 }
 
@@ -48,7 +51,7 @@ const callExecutor = (promise: APromise, executor: ExecutorFn) => {
 
   // To the client, api of fulfill and reject only take 1 param. In reality, it takes the promise
   // object in which it mutates state.
-  const wrappedFulfill = (value: unknown): void => {
+  const wrappedFulfill = (value: unknown | undefined): void => {
     if (called) return
     called = true
     fulfill(promise, value)
@@ -93,14 +96,19 @@ const finale = (promise: APromise) => {
   }
 }
 
-const handleResolved = (promise: APromise, handlers: Handlers) => {
+const handleResolved = (promise: APromise, handlers: HandlerInfo) => {
   const handler =
     promise.state === PROMISE_STATE.FULFILLED ? handlers.onFulfilled : handlers.onRejected
 
-  handler(promise.value)
+  try {
+    const value = handler(promise.value)
+    fulfill(handlers.promise, value)
+  } catch (e) {
+    reject(handlers.promise, e)
+  }
 }
 
-const handle = (promise: APromise, handlers: Handlers) => {
+const handle = (promise: APromise, handlers: HandlerInfo) => {
   if (promise.state === PROMISE_STATE.PENDING) {
     // queue the handler if state is PENDING, we can't call it immediately
     promise.queue.push(handlers)

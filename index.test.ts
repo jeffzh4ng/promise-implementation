@@ -220,3 +220,72 @@ it('should queue handlers when the promise is not rejected immediately', (done) 
     done()
   }, 10)
 })
+
+// =================================================================================================
+//                                          Chaining Promises
+// =================================================================================================
+
+// Our .then() method should return a promise, allowing us to chain .then() statements.
+
+describe('Chaining promises', () => {
+  it('.then() should return a promise', () => {
+    const value = 'fulfilled'
+    const qOnFulfilled = jest.fn()
+    const rOnFulfilled = jest.fn()
+    expect(() => {
+      const p = new APromise((fulfill, reject) => fulfill(value))
+      const q = p.then(qOnFulfilled, null)
+      const r = q.then(rOnFulfilled, null)
+    }).not.toThrow()
+  })
+
+  it('if onFulfilled handler in .then is called without errors then promise from .then should transition to FULFILLED', () => {
+    const value = 'fulfilled'
+    const f1 = jest.fn()
+    const promise = new APromise((fulfill, reject) => {
+      fulfill(null)
+    })
+      .then(() => value, null)
+      .then(f1, null)
+
+    expect(f1.mock.calls.length).toBe(1)
+    expect(f1.mock.calls[0][0]).toBe(value)
+  })
+
+  it('if onRejected handler in .then is called without errors then promise from .then should transition to FULFILLED', () => {
+    const value = 'fulfilled'
+    const f1 = jest.fn()
+    const promise = new APromise((fulfill, reject) => {
+      reject(null)
+    })
+      .then(null, () => value)
+      .then(f1, null)
+
+    expect(f1.mock.calls.length).toBe(1)
+    expect(f1.mock.calls[0][0]).toBe(value)
+  })
+
+  it('if onFulfilled handler in .then throws promise should transition to REJECTED', () => {
+    const reason = new Error('I failed :(')
+    const f1 = jest.fn()
+    new APromise((fulfill, reject) => fulfill(null))
+      .then(() => {
+        throw reason
+      }, null)
+      .then(null, f1)
+    expect(f1.mock.calls.length).toBe(1)
+    expect(f1.mock.calls[0][0]).toBe(reason)
+  })
+
+  it('if onFulfilled handler in .then throws promise should transition to REJECTED', () => {
+    const reason = new Error('I failed :(')
+    const f1 = jest.fn()
+    new APromise((fulfill, reject) => reject(null))
+      .then(null, () => {
+        throw reason
+      })
+      .then(null, f1)
+    expect(f1.mock.calls.length).toBe(1)
+    expect(f1.mock.calls[0][0]).toBe(reason)
+  })
+})
