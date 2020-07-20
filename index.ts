@@ -19,20 +19,27 @@ interface ExecutorFn {
 type FulfillHandler = FulfillFn
 type RejectHandler = RejectFn
 
+interface Handlers {
+  onFulfilled: FulfillHandler
+  onRejected: RejectHandler
+}
+
 export class APromise {
   state: PROMISE_STATE
+  queue: Array<Handlers>
   value: unknown
 
   constructor(executor: ExecutorFn) {
     // initial state of Promise is pending
     this.state = PROMISE_STATE.PENDING
+    this.queue = []
 
     // call executor immediately
     callExecutor(this, executor)
   }
 
   then(onFulfilled: FulfillHandler | null, onRejected: FulfillHandler | null) {
-    handleResolved(this, onFulfilled, onRejected)
+    handle(this, { onFulfilled, onRejected })
   }
 }
 
@@ -66,19 +73,38 @@ const callExecutor = (promise: APromise, executor: ExecutorFn) => {
 const fulfill = (promise: APromise, result: unknown) => {
   promise.state = PROMISE_STATE.FULFILLED
   promise.value = result
+
+  // call finale if fulfill was called asynchronously
+  finale(promise)
 }
 
 const reject = (promise: APromise, error: unknown) => {
   promise.state = PROMISE_STATE.REJECTED
   promise.value = error
+
+  // call finale is reject was called asynchronously
+  finale(promise)
 }
 
-const handleResolved = (
-  promise: APromise,
-  onFulfilled: FulfillHandler,
-  onRejected: RejectHandler
-) => {
-  const handler = promise.state === PROMISE_STATE.FULFILLED ? onFulfilled : onRejected
+// invokes all the handlers stored in the promise
+const finale = (promise: APromise) => {
+  for (const handler of promise.queue) {
+    handle(promise, handler)
+  }
+}
+
+const handleResolved = (promise: APromise, handlers: Handlers) => {
+  const handler =
+    promise.state === PROMISE_STATE.FULFILLED ? handlers.onFulfilled : handlers.onRejected
 
   handler(promise.value)
+}
+
+const handle = (promise: APromise, handlers: Handlers) => {
+  if (promise.state === PROMISE_STATE.PENDING) {
+    // queue the handler if state is PENDING, we can't call it immediately
+    promise.queue.push(handlers)
+  } else {
+    handleResolved(promise, handlers)
+  }
 }

@@ -156,3 +156,67 @@ describe('Handling executor errors', () => {
     expect(promise.state).toBe(PROMISE_STATE.REJECTED)
   })
 })
+
+// =================================================================================================
+//                                        Aynchronous Executor
+// =================================================================================================
+
+// If the executor is asynchronous, and calls the fulfill/reject functions not immediately, then
+// our .then method will fail because the handlers get executed immediately. The handlers get executed
+// when our Promise state is PENDING.
+
+// The .then method should queue handlers if Promise is in a PENDING state.
+
+it('should queue handlers when the promise is not fulfilled immediately', (done) => {
+  const value = 'fulfilled'
+  const promise = new APromise((fulfill, reject) => {
+    setTimeout(fulfill, 1, value) // calls fulfill asynchronously
+  })
+
+  const onFulfilled = jest.fn()
+
+  promise.then(onFulfilled, null)
+
+  setTimeout(() => {
+    expect(onFulfilled.mock.calls.length).toBe(1)
+    expect(onFulfilled.mock.calls[0][0]).toBe(value)
+
+    promise.then(onFulfilled, null)
+  }, 5)
+
+  // at this point executor has not called fulfill yet, it's queued for the event loop after current execution context
+  expect(onFulfilled.mock.calls.length).toBe(0)
+
+  setTimeout(() => {
+    expect(onFulfilled.mock.calls.length).toBe(2)
+    expect(onFulfilled.mock.calls[1][0]).toBe(value)
+    done()
+  }, 10)
+})
+
+it('should queue handlers when the promise is not rejected immediately', (done) => {
+  const reason = 'fulfilled'
+  const promise = new APromise((fulfill, reject) => {
+    setTimeout(reject, 1, reason) // calls fulfill asynchronously
+  })
+
+  const onRejected = jest.fn()
+
+  promise.then(null, onRejected)
+
+  setTimeout(() => {
+    expect(onRejected.mock.calls.length).toBe(1)
+    expect(onRejected.mock.calls[0][0]).toBe(reason)
+
+    promise.then(null, onRejected)
+  }, 5)
+
+  // at this point executor has not called fulfill yet, it's queued for the event loop after current execution context
+  expect(onRejected.mock.calls.length).toBe(0)
+
+  setTimeout(() => {
+    expect(onRejected.mock.calls.length).toBe(2)
+    expect(onRejected.mock.calls[1][0]).toBe(reason)
+    done()
+  }, 10)
+})
