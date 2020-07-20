@@ -136,3 +136,23 @@ describe('One-way transitions', () => {
     expect(promise.state).toBe(PROMISE_STATE.REJECTED)
   })
 })
+
+// =================================================================================================
+//                                        Handling Executor Errors
+// =================================================================================================
+
+// The promise should transition to REJECTED state if the executor throws an error.
+describe('Handling executor errors', () => {
+  it('when the executor throws the promise should transition to the REJECTED state', () => {
+    const reason = 'i failed :('
+    const onRejected = jest.fn()
+    const promise = new APromise((resolve, reject) => {
+      throw reason
+    })
+
+    promise.then(null, onRejected)
+    expect(onRejected.mock.calls.length).toBe(1)
+    expect(onRejected.mock.calls[0][0]).toBe(reason)
+    expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+  })
+})

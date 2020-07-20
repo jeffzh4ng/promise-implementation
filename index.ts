@@ -53,7 +53,11 @@ const callExecutor = (promise: APromise, executor: ExecutorFn) => {
     reject(promise, error)
   }
 
-  executor(wrappedFulfill, wrappedReject)
+  try {
+    executor(wrappedFulfill, wrappedReject)
+  } catch (e) {
+    wrappedReject(e)
+  }
 }
 
 // fulfill and reject definitions are outside of APromise class to make it cleaner. These functions
