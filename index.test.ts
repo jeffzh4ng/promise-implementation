@@ -27,7 +27,9 @@ describe('State', () => {
 
   it('is in PENDING state', () => {
     const promise = new APromise(function executor(fulfill, reject) {})
-    expect(promise.state).toBe(PROMISE_STATE.PENDING)
+    setTimeout(() => {
+      expect(promise.state).toBe(PROMISE_STATE.PENDING)
+    }, 10)
   })
 
   it('transitions to the FULFILLED state with a value', () => {
@@ -36,7 +38,9 @@ describe('State', () => {
       fulfill(value)
     })
 
-    expect(promise.state).toBe(PROMISE_STATE.FULFILLED)
+    setTimeout(() => {
+      expect(promise.state).toBe(PROMISE_STATE.FULFILLED)
+    }, 10)
   })
 
   it('transitions to the REJECTED state with a value', () => {
@@ -46,7 +50,9 @@ describe('State', () => {
       reject(reason)
     })
 
-    expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+    setTimeout(() => {
+      expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+    }, 10)
   })
 })
 
@@ -66,7 +72,7 @@ describe('Observing changes', () => {
     expect(typeof promise.then).toBe('function')
   })
 
-  it('should call the onFulfilled handler when a promise is in a FULFILLED state', () => {
+  it('should call the onFulfilled handler when a promise is in a FULFILLED state', (done) => {
     const value = 'fulfilled'
     const onFulfilled = jest.fn()
 
@@ -74,11 +80,14 @@ describe('Observing changes', () => {
       fulfill(value)
     }).then(onFulfilled, null)
 
-    expect(onFulfilled.mock.calls.length).toBe(1)
-    expect(onFulfilled.mock.calls[0][0]).toBe(value)
+    setTimeout(() => {
+      expect(onFulfilled.mock.calls.length).toBe(1)
+      expect(onFulfilled.mock.calls[0][0]).toBe(value)
+      done()
+    }, 10)
   })
 
-  it('should call the onRejected handler when a promise is in a REJECTED state', () => {
+  it('should call the onRejected handler when a promise is in a REJECTED state', (done) => {
     const reason = 'rejected'
     const onRejected = jest.fn()
 
@@ -86,8 +95,11 @@ describe('Observing changes', () => {
       reject(reason)
     }).then(null, onRejected)
 
-    expect(onRejected.mock.calls.length).toBe(1)
-    expect(onRejected.mock.calls[0][0]).toBe(reason)
+    setTimeout(() => {
+      expect(onRejected.mock.calls.length).toBe(1)
+      expect(onRejected.mock.calls[0][0]).toBe(reason)
+      done()
+    })
   })
 })
 
@@ -102,7 +114,7 @@ describe('One-way transitions', () => {
   const value = 'fulfilled'
   const reason = 'rejected'
 
-  it('does not reject after being fulfilled', () => {
+  it('does not reject after being fulfilled', (done) => {
     const onFulfilled = jest.fn()
     const onRejected = jest.fn()
 
@@ -113,13 +125,16 @@ describe('One-way transitions', () => {
 
     promise.then(onFulfilled, onRejected)
 
-    expect(onFulfilled.mock.calls.length).toBe(1)
-    expect(onFulfilled.mock.calls[0][0]).toBe(value)
-    expect(onRejected.mock.calls.length).toBe(0)
-    expect(promise.state).toBe(PROMISE_STATE.FULFILLED)
+    setTimeout(() => {
+      expect(onFulfilled.mock.calls.length).toBe(1)
+      expect(onFulfilled.mock.calls[0][0]).toBe(value)
+      expect(onRejected.mock.calls.length).toBe(0)
+      expect(promise.state).toBe(PROMISE_STATE.FULFILLED)
+      done()
+    }, 10)
   })
 
-  it('does not fulfill after being rejected', () => {
+  it('does not fulfill after being rejected', (done) => {
     const onFulfilled = jest.fn()
     const onRejected = jest.fn()
 
@@ -130,10 +145,13 @@ describe('One-way transitions', () => {
 
     promise.then(onFulfilled, onRejected)
 
-    expect(onRejected.mock.calls.length).toBe(1)
-    expect(onRejected.mock.calls[0][0]).toBe(reason)
-    expect(onFulfilled.mock.calls.length).toBe(0)
-    expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+    setTimeout(() => {
+      expect(onRejected.mock.calls.length).toBe(1)
+      expect(onRejected.mock.calls[0][0]).toBe(reason)
+      expect(onFulfilled.mock.calls.length).toBe(0)
+      expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+      done()
+    }, 10)
   })
 })
 
@@ -143,7 +161,7 @@ describe('One-way transitions', () => {
 
 // The promise should transition to REJECTED state if the executor throws an error.
 describe('Handling executor errors', () => {
-  it('when the executor throws the promise should transition to the REJECTED state', () => {
+  it('when the executor throws the promise should transition to the REJECTED state', (done) => {
     const reason = 'i failed :('
     const onRejected = jest.fn()
     const promise = new APromise((resolve, reject) => {
@@ -151,9 +169,13 @@ describe('Handling executor errors', () => {
     })
 
     promise.then(null, onRejected)
-    expect(onRejected.mock.calls.length).toBe(1)
-    expect(onRejected.mock.calls[0][0]).toBe(reason)
-    expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+
+    setTimeout(() => {
+      expect(onRejected.mock.calls.length).toBe(1)
+      expect(onRejected.mock.calls[0][0]).toBe(reason)
+      expect(promise.state).toBe(PROMISE_STATE.REJECTED)
+      done()
+    }, 10)
   })
 })
 
@@ -228,18 +250,22 @@ it('should queue handlers when the promise is not rejected immediately', (done) 
 // Our .then() method should return a promise, allowing us to chain .then() statements.
 
 describe('Chaining promises', () => {
-  it('.then() should return a promise', () => {
+  it('.then() should return a promise', (done) => {
     const value = 'fulfilled'
     const qOnFulfilled = jest.fn()
     const rOnFulfilled = jest.fn()
-    expect(() => {
-      const p = new APromise((fulfill, reject) => fulfill(value))
-      const q = p.then(qOnFulfilled, null)
-      const r = q.then(rOnFulfilled, null)
-    }).not.toThrow()
+
+    setTimeout(() => {
+      expect(() => {
+        const p = new APromise((fulfill, reject) => fulfill(value))
+        const q = p.then(qOnFulfilled, null)
+        const r = q.then(rOnFulfilled, null)
+        done()
+      }).not.toThrow()
+    }, 10)
   })
 
-  it('if onFulfilled handler in .then is called without errors then promise from .then should transition to FULFILLED', () => {
+  it('if onFulfilled handler in .then is called without errors then promise from .then should transition to FULFILLED', (done) => {
     const value = 'fulfilled'
     const f1 = jest.fn()
     const promise = new APromise((fulfill, reject) => {
@@ -248,11 +274,14 @@ describe('Chaining promises', () => {
       .then(() => value, null)
       .then(f1, null)
 
-    expect(f1.mock.calls.length).toBe(1)
-    expect(f1.mock.calls[0][0]).toBe(value)
+    setTimeout(() => {
+      expect(f1.mock.calls.length).toBe(1)
+      expect(f1.mock.calls[0][0]).toBe(value)
+      done()
+    }, 10)
   })
 
-  it('if onRejected handler in .then is called without errors then promise from .then should transition to FULFILLED', () => {
+  it('if onRejected handler in .then is called without errors then promise from .then should transition to FULFILLED', (done) => {
     const value = 'fulfilled'
     const f1 = jest.fn()
     const promise = new APromise((fulfill, reject) => {
@@ -261,11 +290,14 @@ describe('Chaining promises', () => {
       .then(null, () => value)
       .then(f1, null)
 
-    expect(f1.mock.calls.length).toBe(1)
-    expect(f1.mock.calls[0][0]).toBe(value)
+    setTimeout(() => {
+      expect(f1.mock.calls.length).toBe(1)
+      expect(f1.mock.calls[0][0]).toBe(value)
+      setTimeout(done)
+    })
   })
 
-  it('if onFulfilled handler in .then throws promise should transition to REJECTED', () => {
+  it('if onFulfilled handler in .then throws promise should transition to REJECTED', (done) => {
     const reason = new Error('I failed :(')
     const f1 = jest.fn()
     new APromise((fulfill, reject) => fulfill(null))
@@ -273,11 +305,15 @@ describe('Chaining promises', () => {
         throw reason
       }, null)
       .then(null, f1)
-    expect(f1.mock.calls.length).toBe(1)
-    expect(f1.mock.calls[0][0]).toBe(reason)
+
+    setTimeout(() => {
+      expect(f1.mock.calls.length).toBe(1)
+      expect(f1.mock.calls[0][0]).toBe(reason)
+      done()
+    }, 10)
   })
 
-  it('if onFulfilled handler in .then throws promise should transition to REJECTED', () => {
+  it('if onFulfilled handler in .then throws promise should transition to REJECTED', (done) => {
     const reason = new Error('I failed :(')
     const f1 = jest.fn()
     new APromise((fulfill, reject) => reject(null))
@@ -285,8 +321,12 @@ describe('Chaining promises', () => {
         throw reason
       })
       .then(null, f1)
-    expect(f1.mock.calls.length).toBe(1)
-    expect(f1.mock.calls[0][0]).toBe(reason)
+
+    setTimeout(() => {
+      expect(f1.mock.calls.length).toBe(1)
+      expect(f1.mock.calls[0][0]).toBe(reason)
+      done()
+    }, 10)
   })
 })
 
@@ -298,28 +338,62 @@ describe('Chaining promises', () => {
 // themselves.
 
 describe('Async handlers', () => {
-  it('if a handler returns a Promise, the entire promise should adopt the state of the returned promise', () => {
+  it('if a handler returns a Promise, the entire promise should adopt the state of the returned promise', (done) => {
     const value = ':)'
     const f1 = jest.fn()
     new APromise((fulfill, reject) => fulfill(null))
       .then(() => new APromise((fulfill, reject) => fulfill(value)), null)
       .then(f1, null)
 
-    expect(f1.mock.calls.length).toBe(1)
-    expect(f1.mock.calls[0][0]).toBe(value)
+    setTimeout(() => {
+      expect(f1.mock.calls.length).toBe(1)
+      expect(f1.mock.calls[0][0]).toBe(value)
+      done()
+    }, 10)
   })
 
-  it('if a handler returns a Promise in the future, the entire promise should adopt its value', () => {
+  it('if a handler returns a Promise in the future, the entire promise should adopt its value', (done) => {
     const value = ':)'
     const f1 = jest.fn()
 
     new APromise((fulfill, reject) => setTimeout(fulfill, 0))
-      .then(() => new APromise((fulfill, reject) => setTimeout(fulfill, 0)), null)
+      .then(() => new APromise((fulfill, reject) => setTimeout(fulfill, 0, value)), null)
       .then(f1, null)
 
     setTimeout(() => {
       expect(f1.mock.calls.length).toBe(1)
       expect(f1.mock.calls[0][0]).toBe(value)
+      done()
+    }, 10)
+  })
+})
+
+// =================================================================================================
+//                                     Execute handlers after event loop
+// =================================================================================================
+
+// One of the requirements in the Promise spec is to call handlers after the event loop has finished
+// processing it's current stack. This makes promise resolution consistent by ensuring all observers
+// are called in the future even if the executor/handlers are synchronous.
+
+describe('Handler execution', () => {
+  it('promise calls the handlers after the event loop', (done) => {
+    const value = ':)'
+    const f1 = jest.fn()
+    let resolved = false
+
+    const p = new APromise((fulfill, reject) => {
+      fulfill(value)
+      resolved = true
+    }).then(f1, null)
+
+    expect(f1.mock.calls.length).toBe(0)
+
+    setTimeout(() => {
+      expect(f1.mock.calls.length).toBe(1)
+      expect(f1.mock.calls[0][0]).toBe(value)
+      expect(resolved).toBe(true)
+      done()
     }, 10)
   })
 })

@@ -97,15 +97,17 @@ const finale = (promise: APromise) => {
 }
 
 const handleResolved = (promise: APromise, handlers: HandlerInfo) => {
-  const handler =
-    promise.state === PROMISE_STATE.FULFILLED ? handlers.onFulfilled : handlers.onRejected
+  setImmediate(() => {
+    const handler =
+      promise.state === PROMISE_STATE.FULFILLED ? handlers.onFulfilled : handlers.onRejected
 
-  try {
-    const value = handler(promise.value)
-    fulfill(handlers.promise, value)
-  } catch (e) {
-    reject(handlers.promise, e)
-  }
+    try {
+      const value = handler(promise.value)
+      fulfill(handlers.promise, value)
+    } catch (e) {
+      reject(handlers.promise, e)
+    }
+  })
 }
 
 const handle = (promise: APromise, handlers: HandlerInfo) => {
