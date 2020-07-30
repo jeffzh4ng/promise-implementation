@@ -112,7 +112,7 @@ const handleResolved = (promise: APromise, handlers: HandlerInfo) => {
 
 const handle = (promise: APromise, handlers: HandlerInfo) => {
   // take state of innermost promise
-  while (promise.value instanceof APromise) {
+  while (promise.state !== PROMISE_STATE.REJECTED && promise.value instanceof APromise) {
     promise = promise.value
   }
   if (promise.state === PROMISE_STATE.PENDING) {

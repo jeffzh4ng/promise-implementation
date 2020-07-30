@@ -397,3 +397,28 @@ describe('Handler execution', () => {
     }, 10)
   })
 })
+
+// =================================================================================================
+//                            Allow promises to reject with resolved promise
+// =================================================================================================
+describe('Reject resolved promise', () => {
+  it('rejects with a resolved promise', (done) => {
+    const value = ':)'
+    const reason = new APromise((fulfill, reject) => fulfill(value))
+
+    const r1 = jest.fn()
+    const p = new APromise((fulfill, reject) => fulfill(null))
+      .then(() => {
+        throw reason
+      }, null)
+      .then(null, r1)
+
+    expect(r1.mock.calls.length).toBe(0)
+
+    setTimeout(function () {
+      expect(r1.mock.calls.length).toBe(1)
+      expect(r1.mock.calls[0][0]).toBe(reason)
+      done()
+    }, 10)
+  })
+})
