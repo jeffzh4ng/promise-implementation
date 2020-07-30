@@ -289,3 +289,37 @@ describe('Chaining promises', () => {
     expect(f1.mock.calls[0][0]).toBe(reason)
   })
 })
+
+// =================================================================================================
+//                                          Async Handlers
+// =================================================================================================
+
+// We should be able to support asynchronous handlers as well. That is, handlers that return promises
+// themselves.
+
+describe('Async handlers', () => {
+  it('if a handler returns a Promise, the entire promise should adopt the state of the returned promise', () => {
+    const value = ':)'
+    const f1 = jest.fn()
+    new APromise((fulfill, reject) => fulfill(null))
+      .then(() => new APromise((fulfill, reject) => fulfill(value)), null)
+      .then(f1, null)
+
+    expect(f1.mock.calls.length).toBe(1)
+    expect(f1.mock.calls[0][0]).toBe(value)
+  })
+
+  it('if a handler returns a Promise in the future, the entire promise should adopt its value', () => {
+    const value = ':)'
+    const f1 = jest.fn()
+
+    new APromise((fulfill, reject) => setTimeout(fulfill, 0))
+      .then(() => new APromise((fulfill, reject) => setTimeout(fulfill, 0)), null)
+      .then(f1, null)
+
+    setTimeout(() => {
+      expect(f1.mock.calls.length).toBe(1)
+      expect(f1.mock.calls[0][0]).toBe(value)
+    }, 10)
+  })
+})

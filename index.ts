@@ -109,6 +109,10 @@ const handleResolved = (promise: APromise, handlers: HandlerInfo) => {
 }
 
 const handle = (promise: APromise, handlers: HandlerInfo) => {
+  // take state of innermost promise
+  while (promise.value instanceof APromise) {
+    promise = promise.value
+  }
   if (promise.state === PROMISE_STATE.PENDING) {
     // queue the handler if state is PENDING, we can't call it immediately
     promise.queue.push(handlers)
