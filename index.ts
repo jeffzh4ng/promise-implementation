@@ -74,6 +74,10 @@ const callExecutor = (promise: APromise, executor: ExecutorFn) => {
 // need to take APromise object because they will be called in the client provided executor function
 // which has it's own `this` context.
 const fulfill = (promise: APromise, result: unknown) => {
+  if (result === promise) {
+    return reject(promise, new TypeError())
+  }
+
   promise.state = PROMISE_STATE.FULFILLED
   promise.value = result
 

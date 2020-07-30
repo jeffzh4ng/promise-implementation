@@ -422,3 +422,18 @@ describe('Reject resolved promise', () => {
     }, 10)
   })
 })
+
+describe('Disallow promises resolving with themselves', () => {
+  it('should throw when attempted to be resolved with itself', (done) => {
+    const r1 = jest.fn()
+    const p = new APromise((fulfill) => fulfill(null))
+    const q = p.then(() => q, null)
+    q.then(null, r1)
+
+    setTimeout(function () {
+      expect(r1.mock.calls.length).toBe(1)
+      expect(r1.mock.calls[0][0] instanceof TypeError).toBe(true)
+      done()
+    }, 10)
+  })
+})
